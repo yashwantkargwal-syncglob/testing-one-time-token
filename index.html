@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>GitHub File Update Test</title>
+</head>
+<body>
+  <h2>Update File on GitHub (Testing)</h2>
+  
+  <form id="updateForm">
+    <label>Owner: <input type="text" id="owner" value="your-username"></label><br><br>
+    <label>Repo: <input type="text" id="repo" value="your-repo"></label><br><br>
+    <label>File Path: <input type="text" id="path" value="index.html"></label><br><br>
+    <label>Branch: <input type="text" id="branch" value="main"></label><br><br>
+    <label>Token: <input type="password" id="token" placeholder="ghp_xxx..."></label><br><br>
+    <textarea id="newContent" rows="10" cols="50">
+<html><body><h1>Hello World - Updated via Browser</h1></body></html>
+    </textarea><br><br>
+    <button type="submit">Update File</button>
+  </form>
+
+  <pre id="output"></pre>
+
+  <script>
+    document.getElementById("updateForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const owner = document.getElementById("owner").value.trim();
+      const repo = document.getElementById("repo").value.trim();
+      const path = document.getElementById("path").value.trim();
+      const branch = document.getElementById("branch").value.trim();
+      const token = document.getElementById("token").value.trim();
+      const contentText = document.getElementById("newContent").value;
+
+      const output = document.getElementById("output");
+      output.textContent = "Updating file...";
+
+      try {
+        // 1. Get current file SHA
+        let res = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}?ref=${branch}`, {
+          headers: { Authorization: `token ${token}` }
+        });
+        if (!res.ok) throw new Error("Failed to fetch file info");
+        let file = await res.json();
+        const sha = file.sha;
+
+        // 2. Encode new content to Base64
+        const newContent = btoa(unescape(encodeURIComponent(contentText)));
+
+        // 3. PUT request to update file
+        let update = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
+          method: "PUT",
+          headers: {
+            "Authorization": `token ${token}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            message: "Updated via browser demo",
+            content: newContent,
+            sha: sha,
+            branch: branch
+          })
+        });
+
+        let result = await update.json();
+        output.textContent = JSON.stringify(result, null, 2);
+      } catch (err) {
+        output.textContent = "Error: " + err.message;
+      }
+    });
+  </script>
+</body>
+</html>
